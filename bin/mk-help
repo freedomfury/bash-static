@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+shopt -s inherit_errexit
+
+MK_FILE="${1:-Makefile}"
+if [[ ! -r "$MK_FILE" ]] ; then
+  echo "Unable to read Makefile: '$MK_FILE'" >&2
+  exit 1
+fi
+
+
+grep -E '^[0-9a-zA-Z_\/\-]+\s?:.*?## .*$$' "$MK_FILE" | \
+  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m%s\n", $1, $2}'
+exit 0

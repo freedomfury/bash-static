@@ -2,3 +2,5 @@
 cache
 build
 .sec
+.DS_Store
+.

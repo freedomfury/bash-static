@@ -164,35 +164,26 @@ build/$(VERSION)/$(VERSION)-patches/patch: build/$(VERSION)/extract cache/$(VERS
 	touch "$(VERSION)-patches/patch"
 
 build/$(VERSION)/extract: cache/$(VERSION).tar.gz
-		 mkdir -p "build/$(VERSION)"
-		 @echo "Extracting $(VERSION) to build directory..."
-		 tar -xzf "cache/$(VERSION).tar.gz" -C "build/"
-		 touch "build/$(VERSION)/extract"
-		 echo "Extraction complete."
+	@echo "Extracting $(VERSION) to build directory..."
+	mkdir -p "build/$(VERSION)"
+	tar -xzf "cache/$(VERSION).tar.gz" -C "build/"
+	touch "build/$(VERSION)/extract"
+	echo "Extraction complete."
 
 build/$(VERSION)/bash: build/$(VERSION)/$(VERSION)-patches/patch
 	@echo "Creating bash (static) in build directory..."
 	$(call mk-parent,$@)
-	pushd "build/$(VERSION)" || {
-		echo "Failed to change directory to build/$(VERSION)"; exit 1;
-	}
-	CC=musl-gcc ./configure --enable-static-link --without-bash-malloc --host=x86_64-linux-musl LDFLAGS="-static" || {
-		echo "Configure failed"; exit 1;
-	}
-	make CC=musl-gcc LDFLAGS="-static" bash || {
-		echo "Build failed"; exit 1;
-	}
-	popd || {
-		echo "Failed to change directory back to previous"
-		exit 1
-	}
+	( cd "build/$(VERSION)" && \
+	  CC=musl-gcc ./configure --enable-static-link --without-bash-malloc --host=x86_64-linux-musl LDFLAGS="-static" || { echo "Configure failed"; exit 1; } && \
+	  make CC=musl-gcc LDFLAGS="-static" bash || { echo "Build failed"; exit 1; } \
+	)
 	file $@
 	$@ --version
-	TMP_LLD=$(shell mktemp /tmp/ldd-check.XXXXXX)
+	TMP_LLD=$$(mktemp /tmp/ldd-check.XXXXXX)
 	trap 'rm -f "$$TMP_LLD"' EXIT
 
 	ldd $@ 2>&1 | tee "$$TMP_LLD" || true
-	if [[ ! -f "$$TMP_LLD" ]] ; then
+	if [ ! -f "$$TMP_LLD" ] ; then
 		echo "No output from ldd, exiting..."
 		exit 1
 	else

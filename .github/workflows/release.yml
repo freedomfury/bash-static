@@ -1,0 +1,52 @@
+name: Release Static Bash
+
+on:
+  push:
+    tags:
+      - 'bash-[0-9]*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Bash version to build (e.g., bash-5.3)'
+        required: true
+        default: 'bash-5.3'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y musl-tools lynx tree
+
+      - name: Build static bash
+        run: make VERSION=${{ steps.vars.outputs.version }} build-static
+
+      - name: Stage release asset
+        run: cp "build/${{ steps.vars.outputs.version }}/bash" bash-static-x86_64
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.version }}
+          name: ${{ steps.vars.outputs.version }}
+          body: |
+            Statically linked GNU Bash built with musl-gcc for x86_64.
+            Tested on Alpine (musl) and Debian (glibc) containers.
+          files: bash-static-x86_64

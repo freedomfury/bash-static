@@ -1,0 +1,60 @@
+name: Nightly Version Check
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  check-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y lynx musl-tools tree
+
+      - name: Check for new Bash version
+        id: check
+        run: |
+          LATEST=$(lynx "https://ftp.gnu.org/gnu/bash/" --dump -nonumbers -listonly \
+            | grep -E 'bash-[0-9]+\.[0-9]+(\.[0-9]+)?\.tar\.gz$' \
+            | sort --version-sort -r \
+            | head -1 \
+            | xargs basename \
+            | sed 's/\.tar\.gz$//')
+
+          echo "Latest version on GNU FTP: ${LATEST}"
+
+          if git ls-remote --tags origin "refs/tags/${LATEST}" | grep -q .; then
+            echo "Tag ${LATEST} already exists — nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version detected: ${LATEST}"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "version=${LATEST}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build static bash
+        if: steps.check.outputs.skip == 'false'
+        run: make VERSION=${{ steps.check.outputs.version }} build-static
+
+      - name: Stage release asset
+        if: steps.check.outputs.skip == 'false'
+        run: cp "build/${{ steps.check.outputs.version }}/bash" bash-static-x86_64
+
+      - name: Create release
+        if: steps.check.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check.outputs.version }}
+          name: ${{ steps.check.outputs.version }}
+          body: |
+            Statically linked GNU Bash built with musl-gcc for x86_64.
+            Tested on Alpine (musl) and Debian (glibc) containers.
+
+            Built automatically by the nightly version check.
+          files: bash-static-x86_64

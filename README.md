@@ -50,6 +50,7 @@ This project automates the process of building a statically linked version of GN
 - `build/$(VERSION)/` — Extracted source, patches, and built binaries
 - `patch/$(VERSION)/` — Place your custom patches here (optional)
 - `bin/` — Helper scripts (e.g., `mk-help`)
+- `deploy/` — Pre-built static bash binary and imgpkg image manifest for distribution
 
 ## Custom Patches
 To add your own patches, place them in `patch/$(VERSION)/`. They will be copied and applied after the official patches.
@@ -58,6 +59,9 @@ To add your own patches, place them in `patch/$(VERSION)/`. They will be copied 
 - The Makefile uses robust error handling and will stop on most errors.
 - All patching and building is done in subdirectories under `build/$(VERSION)`.
 - The static linkage check ensures the resulting Bash binary is truly static.
+
+## Docker Image
+A `Dockerfile` is included for packaging the static bash binary into a consumer image. It copies the binary from the `freedomfury/bash-static` Docker image into an AlmaLinux 9 minimal base, installing it at `/usr/local/bin/bash-static`.
 
 ## License
 This project is provided under the GNU General Public License v3.0. See the Bash source for details.

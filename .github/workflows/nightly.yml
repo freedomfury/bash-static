@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y lynx musl-tools tree
 
-      - name: Check for new Bash version
+      - name: Check for new Bash version or patches
         id: check
         run: |
           LATEST=$(lynx "https://ftp.gnu.org/gnu/bash/" --dump -nonumbers -listonly \
@@ -29,13 +29,24 @@ jobs:
 
           echo "Latest version on GNU FTP: ${LATEST}"
 
-          if git ls-remote --tags origin "refs/tags/${LATEST}" | grep -q .; then
-            echo "Tag ${LATEST} already exists — nothing to do."
+          PATCH_SLUG=$(echo "${LATEST}" | tr -d '.-')
+          PATCH_COUNT=$(lynx "https://ftp.gnu.org/gnu/bash/${LATEST}-patches/" --dump -nonumbers -listonly 2>/dev/null \
+            | grep -cE "${PATCH_SLUG}-[0-9]{3}$" || echo "0")
+
+          echo "Patch count for ${LATEST}: ${PATCH_COUNT}"
+
+          TAG="${LATEST}-p${PATCH_COUNT}"
+          echo "Computed tag: ${TAG}"
+
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
+            echo "Tag ${TAG} already exists — nothing to do."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "New version detected: ${LATEST}"
+            echo "New build needed: ${TAG}"
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "version=${LATEST}" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+            echo "patch_count=${PATCH_COUNT}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build static bash
@@ -50,11 +61,14 @@ jobs:
         if: steps.check.outputs.skip == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.check.outputs.version }}
-          name: ${{ steps.check.outputs.version }}
+          tag_name: ${{ steps.check.outputs.tag }}
+          name: ${{ steps.check.outputs.tag }}
           body: |
             Statically linked GNU Bash built with musl-gcc for x86_64.
             Tested on Alpine (musl) and Debian (glibc) containers.
+
+            Upstream version: ${{ steps.check.outputs.version }}
+            Official patches applied: ${{ steps.check.outputs.patch_count }}
 
             Built automatically by the nightly version check.
           files: bash-static-x86_64

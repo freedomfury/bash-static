@@ -65,20 +65,28 @@ A `Dockerfile` is included for packaging the static bash binary into a consumer 
 
 ## Releases
 
-Releases are named after the upstream Bash version (e.g., `bash-5.3`) and include a `bash-static-x86_64` binary built with musl-gcc and tested on Alpine and Debian.
+### Versioning
+
+Release tags follow the format `<upstream-version>-pN`, where `N` is the number of official GNU patches applied on top of the base release. For example:
+
+- `bash-5.3-p0` — GNU Bash 5.3, no patches applied
+- `bash-5.3-p9` — GNU Bash 5.3 with 9 official patches applied
+- `bash-5.3.1-p0` — GNU Bash 5.3.1 (a GNU point release), no patches applied
+
+We never publish bare version tags (e.g., `bash-5.3`). All releases carry a `-pN` suffix, even when no patches are available. This ensures release ordering is always unambiguous and we never conflict with GNU's own version namespace.
 
 ### Automated (nightly)
-A scheduled workflow runs nightly at 2am UTC. It checks the GNU FTP server for new stable releases (release candidates are excluded) and automatically builds and publishes a release if a new version is found.
+A scheduled workflow runs nightly at 2am UTC. It checks the GNU FTP server for new stable releases and new patches (release candidates are excluded). A new release is published whenever either the upstream version or the patch count changes.
 
 ### Manual
-To trigger a release for a specific version, push a tag:
+To trigger a release for a specific version, use the **Actions → Release Static Bash → Run workflow** menu on GitHub.
+
+Alternatively, push a tag in the `<upstream-version>-pN` format:
 
 ```sh
-git tag bash-5.3
-git push origin bash-5.3
+git tag bash-5.3-p9
+git push origin bash-5.3-p9
 ```
-
-Alternatively, trigger it from the **Actions → Release Static Bash → Run workflow** menu on GitHub without pushing a tag.
 
 ## License
 This project is provided under the GNU General Public License v3.0. See the Bash source for details.

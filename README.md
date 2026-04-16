@@ -63,5 +63,22 @@ To add your own patches, place them in `patch/$(VERSION)/`. They will be copied 
 ## Docker Image
 A `Dockerfile` is included for packaging the static bash binary into a consumer image. It copies the binary from the `freedomfury/bash-static` Docker image into an AlmaLinux 9 minimal base, installing it at `/usr/local/bin/bash-static`.
 
+## Releases
+
+Releases are named after the upstream Bash version (e.g., `bash-5.3`) and include a `bash-static-x86_64` binary built with musl-gcc and tested on Alpine and Debian.
+
+### Automated (nightly)
+A scheduled workflow runs nightly at 2am UTC. It checks the GNU FTP server for new stable releases (release candidates are excluded) and automatically builds and publishes a release if a new version is found.
+
+### Manual
+To trigger a release for a specific version, push a tag:
+
+```sh
+git tag bash-5.3
+git push origin bash-5.3
+```
+
+Alternatively, trigger it from the **Actions → Release Static Bash → Run workflow** menu on GitHub without pushing a tag.
+
 ## License
 This project is provided under the GNU General Public License v3.0. See the Bash source for details.
